@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import typing
 
 import psycopg
 
@@ -9,12 +10,12 @@ logger = logging.getLogger(__name__)
 class DatabaseConnection:
     """Single database connection for infrequent events."""
 
-    def __init__(self, dbname: str, user: str, password: str, host: str, port: int, sync=True) -> None:
+    def __init__(self, dbname: str, user: str, password: str, host: str, port: int, sync: typing.Literal["Sync", "Async"]) -> None:
         self.dsn = f"dbname={dbname} user={user} password={password} host={host} port={port}"
         self.sync = sync
 
     async def __aenter__(self) -> psycopg.AsyncConnection:
-        if self.sync:
+        if self.sync != "Async":
             raise ValueError("Cannot use asynchronous context manager with synchronous connection.")
 
         self._conn = await psycopg.AsyncConnection.connect(self.dsn)
@@ -31,7 +32,7 @@ class DatabaseConnection:
         await self._conn.close()
 
     def __enter__(self) -> psycopg.Connection:
-        if not self.sync:
+        if self.sync != "Sync":
             raise ValueError("Cannot use synchronous context manager with asynchronous connection.")
 
         self._conn = psycopg.connect(self.dsn)

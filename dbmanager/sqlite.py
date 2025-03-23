@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import sqlite3
+import typing
 
 import aiosqlite
 
@@ -38,12 +39,12 @@ class SyncConnectionHandler:
 class DatabaseConnection:
     """Single database connection for infrequent events. Asynchronous and Synchronous."""
 
-    def __init__(self, database_url, sync=True) -> None:
+    def __init__(self, database_url, sync: typing.Literal["Sync", "Async"]) -> None:
         self.database_url = database_url
         self.sync = sync
 
     async def __aenter__(self) -> aiosqlite.Connection:
-        if self.sync:
+        if self.sync != "Async":
             raise ValueError("Cannot use asynchronous context manager with synchronous connection.")
 
         self._conn = await aiosqlite.connect(self.database_url)
@@ -58,7 +59,7 @@ class DatabaseConnection:
         await self._conn.close()
 
     def __enter__(self) -> SyncConnectionHandler:
-        if not self.sync:
+        if self.sync != "Sync":
             raise ValueError("Cannot use synchronous context manager with asynchronous connection.")
 
         self._conn = SyncConnectionHandler(sqlite3.connect(self.database_url))
