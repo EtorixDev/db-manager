@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import sqlite3
-import typing
 
 import aiosqlite
 
@@ -9,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class SyncCursorHandler:
-    """Custom sqlite3 cursor for using a context manager with DatabaseConnection."""
+    """Custom sqlite3 cursor for using a context manager with AsyncSQLiteConnection."""
 
     def __init__(self, cursor: sqlite3.Cursor) -> None:
         self.cursor = cursor
@@ -22,7 +21,7 @@ class SyncCursorHandler:
 
 
 class SyncConnectionHandler:
-    """Custom sqlite3 handler for using a synchronous context manager with DatabaseConnection."""
+    """Custom sqlite3 handler for using a synchronous context manager with AsyncSQLiteConnection."""
 
     def __init__(self, conn: sqlite3.Connection) -> None:
         self._conn = conn
@@ -36,17 +35,13 @@ class SyncConnectionHandler:
         return getattr(self._conn, name)
 
 
-class DatabaseConnection:
-    """Single database connection for infrequent events. Asynchronous and Synchronous."""
+class AsyncSQLiteConnection:
+    """Single sqlite3 connection for infrequent events."""
 
-    def __init__(self, database_url, sync: typing.Literal["Sync", "Async"]) -> None:
+    def __init__(self, database_url) -> None:
         self.database_url = database_url
-        self.sync = sync
 
     async def __aenter__(self) -> aiosqlite.Connection:
-        if self.sync != "Async":
-            raise ValueError("Cannot use asynchronous context manager with synchronous connection.")
-
         self._conn = await aiosqlite.connect(self.database_url)
         return self._conn
 
@@ -58,10 +53,14 @@ class DatabaseConnection:
 
         await self._conn.close()
 
-    def __enter__(self) -> SyncConnectionHandler:
-        if self.sync != "Sync":
-            raise ValueError("Cannot use synchronous context manager with asynchronous connection.")
 
+class SyncSQLiteConnection:
+    """Single sqlite3 connection for infrequent events."""
+
+    def __init__(self, database_url) -> None:
+        self.database_url = database_url
+
+    def __enter__(self) -> SyncConnectionHandler:
         self._conn = SyncConnectionHandler(sqlite3.connect(self.database_url))
         return self._conn
 
@@ -74,8 +73,8 @@ class DatabaseConnection:
         self._conn.close()
 
 
-class DatabasePool:
-    """Pool of database connections for frequent events. Asynchronous only."""
+class AsyncSQLitePool:
+    """Pool of sqlite3 connections for frequent events."""
 
     def __init__(self, database_url, max_size=25, health_check_interval=300, loop: asyncio.AbstractEventLoop | None = None) -> None:
         self.database_url = database_url

@@ -1,23 +1,18 @@
 import asyncio
 import logging
-import typing
 
 import psycopg
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseConnection:
+class AsyncPostgresConnection:
     """Single database connection for infrequent events."""
 
-    def __init__(self, dbname: str, user: str, password: str, host: str, port: int, sync: typing.Literal["Sync", "Async"]) -> None:
+    def __init__(self, dbname: str, user: str, password: str, host: str, port: int) -> None:
         self.dsn = f"dbname={dbname} user={user} password={password} host={host} port={port}"
-        self.sync = sync
 
     async def __aenter__(self) -> psycopg.AsyncConnection:
-        if self.sync != "Async":
-            raise ValueError("Cannot use asynchronous context manager with synchronous connection.")
-
         self._conn = await psycopg.AsyncConnection.connect(self.dsn)
         return self._conn
 
@@ -31,10 +26,14 @@ class DatabaseConnection:
 
         await self._conn.close()
 
-    def __enter__(self) -> psycopg.Connection:
-        if self.sync != "Sync":
-            raise ValueError("Cannot use synchronous context manager with asynchronous connection.")
 
+class SyncPostgresConnection:
+    """Single database connection for infrequent events."""
+
+    def __init__(self, dbname: str, user: str, password: str, host: str, port: int) -> None:
+        self.dsn = f"dbname={dbname} user={user} password={password} host={host} port={port}"
+
+    def __enter__(self) -> psycopg.Connection:
         self._conn = psycopg.connect(self.dsn)
         return self._conn
 
@@ -47,8 +46,8 @@ class DatabaseConnection:
         self._conn.close()
 
 
-class DatabasePool:
-    """Pool of database connections for frequent events. Asynchronous only."""
+class AsyncPostgresPool:
+    """Pool of database connections for frequent events."""
 
     def __init__(self, dbname: str, user: str, password: str, host: str, port: int, max_size: int = 25, health_check_interval: int = 300, loop: asyncio.AbstractEventLoop | None = None) -> None:
         self.dsn = f"dbname={dbname} user={user} password={password} host={host} port={port}"
