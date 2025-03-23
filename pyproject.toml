@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "db-manager"
+version = "0.1.0"
+description = "A basic database manager for sqlite3, aiosqlite, and psycopg."
+authors = ["Etorix <admin@etorix.dev>"]
+packages = [{include = "dbmanager"}]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+psycopg = {version = "^3.2.6", extras = ["binary", "pool"]}
+aiosqlite = "^0.21.0"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.9"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 320

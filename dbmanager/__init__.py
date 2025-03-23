@@ -1,0 +1,1 @@
+"""A basic database manager for sqlite3 and psycopg."""
